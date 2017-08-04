@@ -1,0 +1,7 @@
+4/8/2017
+simInputModules.py Done, update ModelList,Globals and Module file to and from
+TODO, 
+-update matrix creation including globals, with globals seen as output.
+-matrix to and fro files.
+-define how default values are specified in module files
+-create dictionary for sim input

@@ -98,10 +98,7 @@ def updateMatrixFilefromSim():
     # Update Matrix file
     if (Sheet2 in xl.sheet_names):
         dfS = xl.parse(Sheet2,index_col=[0,1,2,3,4], header=[0,1,2,3,4])
-        if (dfS.empty):
-            dfS.to_excel(excelFileNameMatrix, Sheet2)    
-        else:
-            dfS.to_excel(excelFileNameMatrix, Sheet2,index_col=[0,1,2,3,4], header=[0,1,2,3,4])
+        dfS.to_excel(excelFileNameMatrix, Sheet2)
         #print("INFO: Updated,", excelFileNameMatrix)
     else:
         print("ERROR: {} not found in {}".format(Sheet2,excelFileName))
@@ -181,14 +178,10 @@ def updateSimFromModelListFile():
     
     for sheet in xl.sheet_names:
         if sheet == Sheet2:
-            df2 = xl.parse(Sheet2) 
-            if (df2.empty):
-                df2.to_excel(writer, Sheet2)    
-            else:
-                df2 = xl.parse(sheet, index_col=[0,1,2,3,4], header=[0,1,2,3,4])
-                df2.to_excel(writer, Sheet2,index_col=[0,1,2,3,4], header=[0,1,2,3,4])
+            df2 = xl.parse(Sheet2,  index_col=[0,1,2,3,4], header=[0,1,2,3,4]) 
+            df2.to_excel(writer, Sheet2)    
 
-        if ((sheet != Sheet1) and (sheet != Sheet2)):
+        elif ((sheet != Sheet1) and (sheet != Sheet2)):
             dfS = xl.parse(sheet, index_col =[0,1,2])
             dfS.to_excel(writer, sheet)
 
@@ -222,10 +215,7 @@ def updateSimFromMatrixFile():
     df1 = xl.parse(Sheet1)
     df1.to_excel(writer, Sheet1, index=False)   
     
-    if (df2.empty):
-        df2.to_excel(writer, Sheet2)    
-    else:
-        df2.to_excel(writer, Sheet2,index_col=[0,1,2,3,4], header=[0,1,2,3,4])
+    df2.to_excel(writer, Sheet2)    
    
     for sheet in xl.sheet_names:
         if ((sheet != Sheet1) and (sheet != Sheet2) ):
@@ -268,10 +258,7 @@ def updateSimFromGlobalsFile():
     df1.to_excel(writer, Sheet1, index=False)   
     
     df2 = xl.parse(Sheet2,index_col=[0,1,2,3,4], header=[0,1,2,3,4])
-    if (df2.empty):
-        df2.to_excel(writer, Sheet2)    
-    else:
-        df2.to_excel(writer, Sheet2,index_col=[0,1,2,3,4], header=[0,1,2,3,4])
+    df2.to_excel(writer, Sheet2)    
     
     df3.to_excel(writer, Sheet3)
    
@@ -392,10 +379,6 @@ def _getInputModules():
     return 0
 
 def getModulesForSim():
-    updateSimFromScenarioFiles()
-
-def updateSimFromScenarioFiles():
-
     isExcelFileOpen(excelFileName)
     isExcelExisting(excelFileName)
 
@@ -423,12 +406,15 @@ def updateSimFromScenarioFiles():
             dfS = pd.read_excel(df1["Scenario"][idx], index_col =[0,1,2])
             df.append(dfS)
             dfNames.append(df1["Module"][idx])
+            print("INFO: {} from {} inserted into {}".format(df1["Module"][idx], df1["Scenario"][idx],excelFileName))
         else:
             # Read current sheet
             dfS = xl.parse(df1["Module"][idx], index_col =[0,1,2])
             df.append(dfS)
             modLst.remove(df1["Module"][idx])
             dfNames.append(df1["Module"][idx])
+            
+
     
     writer = pd.ExcelWriter(excelFileName, engine='openpyxl')
     df1.to_excel(writer, Sheet1, index=False)
@@ -439,6 +425,93 @@ def updateSimFromScenarioFiles():
     writer.save()
 
     print("INFO: Modules updated in",excelFileName)
+
+
+def updateSimFromScenarioFiles():
+    isExcelFileOpen(excelFileName)
+    isExcelExisting(excelFileName)
+
+    xl = pd.ExcelFile(excelFileName)
+
+    for sheet in notModuleSheets:
+        if sheet not in xl.sheet_names:
+            print("ERROR: Incomplete simulation file, missing ", sheet)
+            raise ValueError
+    
+    # Get module list sheet from excel
+    df = []
+    df1 = xl.parse(Sheet1)
+    df2 = xl.parse(Sheet2, index_col=[0,1,2,3,4], header=[0,1,2,3,4])
+    df3 = xl.parse(Sheet3, index_col =[0,1,2])
+
+    # Create List of all sheets and do not override already included modules
+    modLst = xl.sheet_names[:]
+    for sheet in notModuleSheets:
+        modLst.remove(sheet)
+    dfNames = []
+
+    for idx in df1.index:
+        # Read current sheet
+        dfS = xl.parse(df1["Module"][idx], index_col =[0,1,2])
+        df.append(dfS)
+        modLst.remove(df1["Module"][idx])
+        dfNames.append(df1["Module"][idx])
+        print("INFO: {} from {} updated in {}".format(df1["Module"][idx], df1["Scenario"][idx],excelFileName))
+    
+    writer = pd.ExcelWriter(excelFileName, engine='openpyxl')
+    df1.to_excel(writer, Sheet1, index=False)
+    df2.to_excel(writer, Sheet2)
+    df3.to_excel(writer, Sheet3)
+    for idx, dfS in enumerate(df):
+        dfS.to_excel(writer, dfNames[idx])
+    writer.save()
+
+    print("INFO: Modules updated in",excelFileName)
+
+def updateScenarioFilesFromSim():
+    
+    isExcelExisting(excelFileName)
+
+    xl = pd.ExcelFile(excelFileName)
+
+    for sheet in notModuleSheets:
+        if sheet not in xl.sheet_names:
+            print("ERROR: Incomplete simulation file, missing ", sheet)
+            raise ValueError
+    
+    # Get module list sheet from excel
+    df = []
+    df1 = xl.parse(Sheet1)
+    df2 = xl.parse(Sheet2, index_col=[0,1,2,3,4], header=[0,1,2,3,4])
+    df3 = xl.parse(Sheet3, index_col =[0,1,2])
+
+    # Create List of all sheets and do not override already included modules
+    modLst = xl.sheet_names[:]
+    for sheet in notModuleSheets:
+        modLst.remove(sheet)
+    dfNames = []
+
+    for idx in df1.index:
+        if df1["Module"][idx] not in modLst:
+            print("WARNING: Module not loaded", df1["Module"][idx])
+            
+            df.append(dfS)
+            dfNames.append(df1["Module"][idx])
+        else:
+            # Read current sheet
+            dfS = xl.parse(df1["Module"][idx], index_col =[0,1,2])
+            if not isExcelFileOpen(df1["Scenario"][idx]):
+                dfS.to_excel(df1["Scenario"][idx], sheet_name=df1["Module"][idx])
+                modLst.remove(df1["Module"][idx])
+                print("INFO: {} at {} updated from {}".format(df1["Module"][idx], df1["Scenario"][idx],excelFileName))
+
+    print("INFO: Done. Modules updated from", excelFileName)
+    
+
+def readSimIputs():
+    #TODO
+    inputDictionary = {}
+    return inputDictionary
 
 def createConnectivityMatrix():
     xl = pd.ExcelFile(excelFileName)
@@ -588,5 +661,6 @@ if __name__ == "__main__":
     #updateFilesFromSim()
     #updateSimToFiles()
     #updateSimFromScenarioFiles()
-    #getModulesForSim()
-    createConnectivityMatrix()
+    getModulesForSim()
+    #createConnectivityMatrix()
+    #updateScenarioFilesFromSim()
