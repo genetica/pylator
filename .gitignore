@@ -1,0 +1,7 @@
+/__pycache__
+/.vscode
+/~*
+/*.hdf5
+/*hdf5*
+/*.xlsx
+/*.json
