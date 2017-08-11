@@ -13,7 +13,7 @@ column2 = "Property"
 column3 = "Name"
 
 base = 3
-columns = [column1, column2, column3, "Exposed", "Default", "Description", "Dimensions"]
+columns = [column1, column2, column3, "Exposed", "Description", "default", "type", "dimensions",  "size"]
 
 initialData = {
 "constants" : { "model1"  : ["pi", "exp"],

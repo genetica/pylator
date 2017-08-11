@@ -1,4 +1,45 @@
 -------------------------------------------------------------------------------
+11-08-2017 - gene
+-------------------------------------------------------------------------------
+It is important to have a fast simulation. A current question that I am 
+pondering. To collect thoughts. A program can run as threaded, still actively
+sharing the same CPU cache. As multi-processing thus using physical different
+CPU cores and not sharing cache. It is possible for two CPUs to share
+RAM and using semaphores to keep concurrency. Then there is distributed 
+computing which I will just ignore currently. Semaphores are not required if
+programming is done correctly but some control will still be required. The
+simulation modules should either run as a thread or as a process. What would
+the trade-off be, spawning multiple threads and executing them in the right
+order RAM access will be reduced as the right data is already in the cache
+but speed is limited to the clock of the core. Processes will increase RAM
+access but speed is limited to a factor of the amount of cores. We assume
+a single access bus to the RAM. Only a single CPU core can access the RAM
+at a time (physical constraint) thus in essence the maximum speed of the 
+processes is then limited by the speed of the RAM bus. I should look at how
+these limits can be calculated per machine and what trade-offs can be made.
+I currently feel like processes will be the most flexible as controlling 
+what data are stored in the CPU cache is not that easy with current 
+frameworks. Modules will currently be spawned as processes. 
+
+It will be an interesting endeavour to design an algorithm (learning or 
+traditional) that analyses all the loaded modules and decide which modules
+should be packed together in a process and multiple threads and which modules
+should live as their own process.
+
+-------------------------------------------------------------------------------
+10-08-2017 - gene
+-------------------------------------------------------------------------------
+An interesting GUI platform, maybe for future interface:
+www.fltk.org
+I found a platform openeaagles or more a Mixed  Reality Simulation Platform
+specifically for building and simulating real "systems" in an environment.
+Might be useful for complete 3D world interface. It also connects well with
+Outerra, a 3D engine for planetary rendering using real data, but its paid.
+Another interface is JSBSim ,an open source flight dynamics & control 
+software library in C++. Maybe interfacing with 3d generators such as Blender
+and the unreal engine for world simulation.
+
+-------------------------------------------------------------------------------
 31-07-2017 - gene
 -------------------------------------------------------------------------------
 Before the simulator itself can be developed test tools are required. On 

@@ -1,3 +1,14 @@
+11/8/2017
+TODO
+    -create dictionary for sim input
+        __calculateInitialValue__
+        __getModuleData__
+        getSimData
+    - readConnectivityMatrix will serve what purpose?
+    - have connectivity matrix updated by scenario files by keeping
+      existing connections and not clearing connectivityMatrix
+    - check matrix viability
+
 4/8/2017
 simInputModules.py Done, update ModelList,Globals and Module file to and from
 TODO, 

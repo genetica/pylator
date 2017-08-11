@@ -13,6 +13,7 @@ sheet1Column2 = "Path"
 sheet1Column3 = "Scenario"
 sheet1Columns = [sheet1Column1, sheet1Column2, sheet1Column3]
 
+# default globals inputs
 simGlobals = {
 "simulation" : {    "execution"     : { "step"          : 0,
                                         "time"          : 1},
@@ -42,6 +43,7 @@ columns = [column1, column2, column3]
 sheet3Columns = [column1, column2, column3, "default"]
 
 notModuleSheets = [Sheet1, Sheet2, Sheet3]
+
 
 def isExcelFileOpen(file2Check, error = True):
     if ('~$' + file2Check in os.listdir()):
@@ -205,16 +207,13 @@ def updateSimFromMatrixFile():
     if not (Sheet2 in xl.sheet_names):
         df2 = pd.DataFrame([], columns=[])
     else:
-        df2 = pd.read_excel(excelFileNameMatrix, sheetname=Sheet2,index_col=[0,1,2,3,4], header=[0,1,2,3,4])
-
-    
+        df2 = pd.read_excel(excelFileNameMatrix, index_col=[0,1,2,3,4], header=[0,1,2,3,4])
 
     # Write excel file    
     writer = pd.ExcelWriter(excelFileName, engine='openpyxl')
     
     df1 = xl.parse(Sheet1)
     df1.to_excel(writer, Sheet1, index=False)   
-    
     df2.to_excel(writer, Sheet2)    
    
     for sheet in xl.sheet_names:
@@ -328,53 +327,6 @@ def createEmptySim(override = False):
     #     pass
 
     # print("Available module selection completed.")
-
-    return 0
-
-def _createModelList():
-    # Create empty Module List excel file
-    isExcelFileOpen(excelFileName)
-
-
-    df = pd.DataFrame([], columns=sheet1Columns)
-    df.to_excel(excelFileName, index=False, sheet_name= Sheet1)
-
-    print("Fill in the excel spreadsheet, save it and close Excel")
-    os.system("start " + excelFileName)
-
-    # Wait for excel to get populated and closed
-    while ('~$' + excelFileName in os.listdir()):
-        pass
-
-    print("Available module selection completed.")
-
-    return 0
-
-
-def _getInputModules():
-    # Create empty Module List excel file
-    isExcelFileOpen(excelFileName)
-    #isExcelExisting(excelFileName)
-
-    try:
-        df = pd.read_excel(excelFileName, sheetname=Sheet1)
-        df.to_excel(excelFileName, index=False, sheet_name= Sheet1)
-    except PermissionError:
-        print("ERROR: Close excel file", excelFileName)
-        raise PermissionError
-    except FileNotFoundError:
-        print("File created ", excelFileName)
-        df = pd.DataFrame([], columns=sheet1Columns)
-        df.to_excel(excelFileName, index=False, sheet_name= Sheet1)
-
-    print("Fill in the excel spreadsheet, save it and close Excel")
-    os.system("start " + excelFileName)
-
-    # Wait for excel to get populated and closed
-    while ('~$' + excelFileName in os.listdir()):
-        pass
-
-    print("Available module selection completed.")
 
     return 0
 
@@ -530,6 +482,20 @@ def createConnectivityMatrix():
     dfNames = []
     inCnt = 0
     outCnt = 0
+
+    name = "Globals"
+    dfNames.append(name)
+    dfS = xl.parse(name, index_col =[0,1,2])
+    df.append(dfS)
+
+    dfSOut = dfS.copy()
+    dfSOut.reset_index(inplace=True)
+    dfSOut.insert(len(dfSOut.columns), "Index", [0]*len(dfSOut))
+    for i in range(len(dfSOut)):
+        dfSOut.set_value(i, "Index", outCnt)
+        outCnt += 1
+    dfOut = dfSOut.copy()
+
     for name in xl.sheet_names:
         if name not in notModuleSheets:
             dfNames.append(name)
@@ -566,22 +532,30 @@ def createConnectivityMatrix():
             dfOut.append(dfSOut)
             
     dfIn.insert(0, "IO", ["Input"]*len(dfIn))
+    dfIn.reset_index(inplace=True)
     dfIn.set_index(["IO","Module","Property", "Name","Index"], inplace=True)
-    dfOut.insert(0, "IO", ["Output"]*len(dfOut))
+
+    dfOut.reset_index(inplace=True)
+    dfOut.insert(0, "IO", ["Output" for a in range(len(dfOut))])
+    if 'index' in dfOut.columns:
+        dfOut.drop("index", axis=1, inplace=True)
+    for i in range(len(df[0])):
+        dfOut.set_value(i, "IO", "Globals")
+        dfOut.set_value(i, "Module", dfOut["Category"][i])
+    dfOut.drop("Category", axis=1, inplace=True)
     dfOut.set_index(["IO","Module", "Property", "Name","Index" ], inplace=True)
-    
 
     col = dfOut.transpose().columns
     row = dfIn.index
     new = pd.DataFrame(index=row, columns=col)
 
-
     df = []
     dfNames = []
     for name in xl.sheet_names:
+        
         if name == Sheet2:
             pass
-        if name == Sheet1:
+        elif name == Sheet1:
             dfNames.append(name)
             dfS = xl.parse(name)
             df.append(dfS)            
@@ -601,15 +575,108 @@ def createConnectivityMatrix():
             dfS.to_excel(writer, dfNames[idx])
     writer.save()
 
-    print("Assign crosses in the appropriate block")
-    os.system("start " + excelFileName)
+    # print("Assign crosses in the appropriate block")
+    # os.system("start " + excelFileName)
 
-    # Wait for excel to get populated and closed
-    while ('~$' + excelFileName in os.listdir()):
-        pass
+    # # Wait for excel to get populated and closed
+    # while ('~$' + excelFileName in os.listdir()):
+    #     pass
 
-    print("Matrix Configuration completed.")
-    return 0 
+    # print("Matrix Configuration completed.")
+    return 0
+
+def __getModuleData__(simData, name, dfS):
+    """
+    Read the specified module scenario file provided as a pandas dataframe (dfS)
+    and store it in the dictionary simData with reference to name.
+
+    """
+    pass
+
+def __calculateInitialValue__(simData, name, idx, dfS):
+    """
+
+    All inputs/outputs must have initial values which can be either an array,
+    integer, double, bool, string. All arrays are placed as numpy arrays of type int64,
+    float64. Data size must be fixed at simulation time and can contain globals
+    that do no change. Variables that change during simulation are inputs and 
+    are linked through the connectivity matrix.
+
+    default type dimensions size
+
+    default- value or link to script that will create a data object with data 
+             with the specified attributes. Or the default value of all elements
+             in an array.
+             Use "random [min] [max]" to populate an array with uniform distributed values.
+    type - "int", "float", "str"
+    dimensions - amount of dimensions in array
+    size - size of dimensions
+    
+    Examples.
+      Single scalar value.
+    default type    dimensions  size
+    12      int     0           1
+
+      vector point at position 0 - >[0, 0, 0]
+    default type    dimensions  size
+    0       int     1           3
+      
+    """
+    return 0
+
+def getSimData():
+    isExcelFileOpen(excelFileName)
+    isExcelExisting(excelFileName)
+
+    xl = pd.ExcelFile(excelFileName)
+
+    for sheet in notModuleSheets:
+        if sheet not in xl.sheet_names:
+            print("ERROR: Incomplete simulation file, missing ", sheet)
+            raise ValueError
+    
+    # Get module list sheet from excel
+    df = []
+    df1 = xl.parse(Sheet1)
+    df2 = xl.parse(Sheet2, index_col=[0,1,2,3,4], header=[0,1,2,3,4])
+    df3 = xl.parse(Sheet3, index_col =[0,1,2])
+
+    simData = {}
+    simData["Modules/Names"] = []
+    simData["Modules/Paths"] = []
+    simData["Modules/Scenario"] = []
+
+    #Modlist
+    for idx in df1.index:
+        simData["Modules/Names"].append(df1["Module"][idx])
+        simData["Modules/Paths"].append(df1["Path"][idx])
+        simData["Modules/Scenario"].append(df1["Scenario"][idx])
+        
+
+
+    # Create List of all sheets and do not override already included modules
+    modLst = xl.sheet_names[:]
+    for sheet in notModuleSheets:
+        modLst.remove(sheet)
+    dfNames = []
+
+    for idx in df1.index:
+        if df1["Module"][idx] not in modLst:
+            #dfS = pd.read_excel(df1["Scenario"][idx], index_col =[0,1,2])
+            #df.append(dfS)
+            #dfNames.append(df1["Module"][idx])
+            #print("INFO: {} from {} inserted into {}".format(df1["Module"][idx], df1["Scenario"][idx],excelFileName))
+            print("ERROR: Incomplete simulation file, missing ", df1["Module"][idx])
+            raise ValueError            
+        else:
+            # Read current sheet
+            dfS = xl.parse(df1["Module"][idx], index_col =[0,1,2])
+            df.append(dfS)
+            modLst.remove(df1["Module"][idx])
+            dfNames.append(df1["Module"][idx])
+            
+
+
 
 def readConnectivityMatrix():
     xl = pd.ExcelFile(excelFileName)
@@ -621,7 +688,9 @@ def readConnectivityMatrix():
         print("ERROR: Close excel file", excelFileName)
         raise PermissionError
 
-    tdf = pd.read_excel(excelFileName, sheetname=Sheet2,index_col=[0,1,2,3,4], header=[0,1,2,3,4])
+    #dfS = pd.read_excel(excelFileName, sheetname=Sheet2,index_col=[0,1,2,3,4], header=[0,1,2,3,4])
+    dfS = xl.parse(Sheet2,index_col=[0,1,2,3,4], header=[0,1,2,3,4])
+
 
     #xl.parse(name, index_col =[0,1,2])
 
@@ -656,11 +725,13 @@ if __name__ == "__main__":
     
     #readConnectivityMatrix()
     #createEmptySim(True)
-    #updateScenarioFiles()
+    
     #updateSimFromFiles()
-    #updateFilesFromSim()
-    #updateSimToFiles()
+    updateFilesFromSim()
     #updateSimFromScenarioFiles()
-    getModulesForSim()
+    #updateSimFromMatrixFile()
+    #updateMatrixFilefromSim()
+    #getModulesForSim()
     #createConnectivityMatrix()
     #updateScenarioFilesFromSim()
+    #createConnectivityMatrix()
