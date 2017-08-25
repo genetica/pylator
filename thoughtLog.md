@@ -1,4 +1,46 @@
 -------------------------------------------------------------------------------
+25-08-2017 - gene
+-------------------------------------------------------------------------------
+With my lack of knowledge in multiprocessing I have found a few, I'll almost 
+call them, guidelines. Checking if an Event() is set takes a lot of time, 
+thus
+While Event().is_set():
+    #some code
+Is very slow in checking the flag. For highly iterative quick tasks, find
+another way.
+
+I have come to the conclusion that I will have to pickle a dictionary 
+to every process containing the ctype handle created by multiprocessing
+module. This is different from just sending data pointers to every process
+as the multiprocessing assist in creating a generic pointer that every
+process can use as pointers are usually referenced to the start of the 
+current process memory block and not absolute.
+
+-------------------------------------------------------------------------------
+21-08-2017 - gene
+-------------------------------------------------------------------------------
+
+Events help me control the processes individual. I have a flag and set it 
+to indicate certain status or clear it or wait for another process to set
+it. For multiple process wanting to all say they completed a certain stage
+the usage of Barriers are more efficient. A Barrier wait for a set amount
+of process to reach it where after it releases all the processes currently 
+at it, it can also be re-used multiple times.
+
+-------------------------------------------------------------------------------
+15-08-2017 - gene
+-------------------------------------------------------------------------------
+
+The usage of a Manager() sounds great. Add arbitrary data to the manager
+and share it over multiple processes, it even allow distributed computing
+to share variables. Unfortunatley for big data it is terrible.
+Managerd pickle the data to a process and then pickle the changed data back 
+to itself ensuring concurrency. Managers does not work with binary objects 
+in the sense that the manager can not detect whether data change within the 
+object or not. Managers as I see it can be used for control and moving
+data for distributed computing.
+
+-------------------------------------------------------------------------------
 11-08-2017 - gene
 -------------------------------------------------------------------------------
 It is important to have a fast simulation. A current question that I am 

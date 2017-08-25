@@ -1,4 +1,27 @@
 -------------------------------------------------------------------------------
+25-08-2017 - gene
+-------------------------------------------------------------------------------
+Was awaiting approval to continue work.
+
+Has developed Model.py and sim.py. Building a module class on top of the
+multiprocessing Process class. The class Module will be required for every
+module to be used and will be imported as Module, the user will require to
+override the function execute and have access to simData. self.simData also
+exist but more readable code will be developed to just use simData, self is 
+very cluttering.
+
+This is not working code currently.
+A folder streamTest was also added, this folder contains different tests that
+was executed and played around with to figure the multiprocessing module and
+different speed executions.
+
+Note, accessing dictionary entries iterativley is very slow compared to 
+storing the reference in a new variable directly. 
+
+Guideline will need to be provided to users that write the Module code
+just to keep speed up etc.
+
+-------------------------------------------------------------------------------
 11-08-2017 - gene
 -------------------------------------------------------------------------------
 Currently the input/output to sim is performed through excel files. The files

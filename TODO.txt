@@ -1,3 +1,9 @@
+15/8/2017
+Additions
+    - Have variables reference variables reference variables etc.
+    - "size" entry variables must have multiples.
+    - Currently can not mix variables and values in the same data entry within excel.
+
 11/8/2017
 TODO
     -create dictionary for sim input
@@ -5,6 +11,7 @@ TODO
         __getModuleData__
         getSimData
     - readConnectivityMatrix will serve what purpose?
+Additions
     - have connectivity matrix updated by scenario files by keeping
       existing connections and not clearing connectivityMatrix
     - check matrix viability
