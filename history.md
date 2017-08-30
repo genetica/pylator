@@ -1,4 +1,37 @@
 -------------------------------------------------------------------------------
+30-08-2017 - gene
+-------------------------------------------------------------------------------
+The Model class are in a usable condition. This class is built on 
+multiprocessing class Process and can be inherited by the the user modules.
+The generic functions to build the simulation dictionary is not yet completed
+and currently this must be completed manually:
+    createModuleDictionary(self)
+    updateSimulationVariables(self)
+    updateInputVariables(self)
+    setOutputVariables(self)
+    updateOutputVariables(self)
+The user then need to define the following function:
+    initialise(self, simData)
+    execute(self, simData)
+    finalise(self, simData) 
+simData in this case is the module specific dictionary which in the end
+of the execution cycle update the real simulation dictionary. Although
+all shared arrays are still the same memory space.
+
+The Scheduler class are created that define how the simulation are 
+executed. Currently the function for creating the general simulation 
+dictionary must still be created and the user need to write this function
+themselve.
+    create_sim_data(self)
+
+Also the Scheduler does not currently use any inset data such as the 
+connectivity matrix, it only use the manually generated script_info which
+define which modules to load and execute.
+
+In summary the schedular currently only load modules and execute and change
+the current requested buffer pointer.
+
+-------------------------------------------------------------------------------
 25-08-2017 - gene
 -------------------------------------------------------------------------------
 Was awaiting approval to continue work.

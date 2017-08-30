@@ -1,3 +1,15 @@
+"""
+
+    Model class:
+    This class are used to create a Module to be used by the
+    pylator scheduler.
+
+
+    Original Created: Gene Stoltz
+    Original Date: 25-07-2017
+
+"""
+
 import ctypes
 import logging
 import multiprocessing as mp
@@ -7,7 +19,9 @@ from contextlib import closing
 
 import numpy as np
 
+debug = mp.get_logger().debug
 info = mp.get_logger().info
+crit = mp.get_logger().critical
 
 class Model(mp.Process):
     __count = 0
@@ -15,8 +29,7 @@ class Model(mp.Process):
         mp.Process.__init__(self)
         
         flags, simData, connectivityMatrix = args
-
-        
+      
         #self.crit = logs[0]#mp.get_logger().critical
         
         self.name = name
@@ -25,60 +38,106 @@ class Model(mp.Process):
         self.connectivityMatrix = connectivityMatrix
         self.flags = flags
         Model.__count += 1
+
         self.createModuleDictionary()
         info("Initialised {}".format(self.name))
 
+    def initialise(self, simData):
+        pass
+
+    def finalise(self, simData):
+        pass
+
+
     def createModuleDictionary(self):
+        # Need to be generic dictionary specific for module
         self.moduleData = {}
-
-        # simulation specific
-        self.moduleData['iteration'] = int(self.simData["iteration"].value)
-        
-        # constants
-        if (self.name == "A"):
-            self.simData["start"] = self.simData["a_start"].value
-
-        if (self.name == "B"):
-            self.simData["start"] = self.simData["b_start"].value
-
-        self.moduleData['start'] = self.simData['start']
-
-        # input outputs
-        self.moduleData["array"] = np.frombuffer(self.simData["array_ptr"])
-
+        crit("ERROR createModuleDictionary")
+        pass
     
     def updateSimulationVariables(self):
-        self.moduleData['iteration'] = int(self.simData["iteration"].value)
+        self.moduleData['/simulation/iteration'] = int(self.simData["/simulation/iteration"].value)
+        self.moduleData['/simulation/buffer_current'] = int(self.simData["/simulation/buffer_current"].value)
 
-    def updateInputOutputVariables(self):
-        self.moduleData["array"] = np.frombuffer(self.simData["array_ptr"])
+    def updateInputVariables(self):
+        # Need to be generic dictionary specific for module
+        buff_frame = self.moduleData['/simulation/buffer_current']
+        if buff_frame == 0:
+            buff_frame = 1
+        else:
+            buff_frame = 0
+        
+        crit("ERROR updateVariables")
+        pass
 
-    def updateVariables(self):
+            
+
+    def setOutputVariables(self):
+        # check what buffer frame output to use
+        buff_frame = self.moduleData['/simulation/buffer_current']       
+        # Need to be generic dictionary specific for module
+        crit("ERROR setOutputVariables")
+        pass
+
+    def updateOutputVariables(self):
+        # might need to reupdated shared dictionary, depends... Uhmmm.
+        pass
+
+    def preExecutionUpdateVariables(self):
         self.updateSimulationVariables()
-        self.updateInputOutputVariables()
+        self.updateInputVariables()
+        self.setOutputVariables()
+
+    def postExecutionUpdateVariables(self):
+        self.updateOutputVariables()
     
     def run(self):
-        info("Run")
-        #model = model_class(name, simData, connectivityMatrix)
+        info("Run")       
+        self.initialise(self.moduleData)
 
-        #modelData = model.createModuleDictionary(simData)
+        
 
         while self.flags["simulation_active"].is_set():
 
             self.flags["simulation_next"].wait()
-            
+            longestDelay = self.simData["/simulation/longestDelay"].value    
             t1 = time.time()
-            self.updateVariables()
-            
-            self.execute(self.moduleData)
+            self.preExecutionUpdateVariables()
+            if (self.moduleData["/simulation/continuous"]):
+                tc1 = time.time()
+                self.execute(self.moduleData)
+                tc2 = time.time()
+                td = tc2 - tc1
+                info(td)
+                if td > self.simData["/simulation/longestDelay"].value:
+                    self.simData["/simulation/longestDelay"].value = td  
 
-            t2 = time.time()
-            info(t2 - t1)
+                if (longestDelay > 0.001):
+                    delay = td
+                    while delay + 2*td < longestDelay:
+                        
+                        tc1 = time.time()
+                        self.execute(self.moduleData)
+                        tc2 = time.time()
+                        td = tc2 - tc1
+                        delay += td
+
+                self.postExecutionUpdateVariables()
+                t2 = time.time()
+                info(t2 - t1)
+            else:
+                self.execute(self.moduleData)
+                self.postExecutionUpdateVariables()
+                t2 = time.time()
+                if t2 - t1 > self.simData["/simulation/longestDelay"].value:
+                    info("Logest Delay {}".format(t2 - t1))
+                    self.simData["/simulation/longestDelay"].value = t2 - t1
+                info(t2 - t1)
 
             self.flags["Module_done"].wait()
             self.flags["simulation_result"].wait()
 
-
+        self.finalise(self.moduleData)
 
         #self.execute(self.moduleData)
 
@@ -89,20 +148,6 @@ if __name__ == '__main__':
 
     #  NOT valid test currently
 
-
     logger = mp.log_to_stderr()
     #logger.setLevel(logging.CRITICAL)
     logger.setLevel(logging.INFO)
-
-
-    N, M = 15000, 11
-    base_ptr = mp.RawArray(ctypes.c_double, N)
-    arr = np.frombuffer(base_ptr)
-    arr[:] = np.array(np.random.uniform(size=N)*1000, np.int)
-    arr_orig = arr.copy()
-
-
-    M1 = Model("test", "path", "cent")
-    M1.execute()
-    M2 = Model("test", "path", "cent")
-    M2.execute()

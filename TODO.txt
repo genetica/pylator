@@ -1,3 +1,10 @@
+30/8/2017
+TODO
+    - create generic function for Scheduler to create simulator dictionary.
+    - create generic functions for Model to update inputs/outputs and module
+      specific dictionary used for simulation.
+    - create function to prepare the excel data read to feed into the Scheduler.
+
 15/8/2017
 Additions
     - Have variables reference variables reference variables etc.

@@ -1,4 +1,19 @@
 -------------------------------------------------------------------------------
+30-08-2017 - gene
+-------------------------------------------------------------------------------
+pylator with its new classy style. Unfortunatley there is significant work
+left in setting up the generic functions for every module. I have to say
+the classes does provide a clear interface for the simulator. One thing that
+bother me is the requirement of continuously requiring to define something
+like "debug = mp.get_logger().debug" as loggers can not be pickled. There
+must be another way. 
+
+I have also had some trouble with the new importlib.util, as the suggested
+method for python 3.6 prevents classes from being pickled afterwards. Luckily
+like the module "imp" there is a way to use deprecated function to import
+classes that can be pickled, still in the future this will need to change.
+
+-------------------------------------------------------------------------------
 25-08-2017 - gene
 -------------------------------------------------------------------------------
 With my lack of knowledge in multiprocessing I have found a few, I'll almost 
@@ -13,7 +28,7 @@ I have come to the conclusion that I will have to pickle a dictionary
 to every process containing the ctype handle created by multiprocessing
 module. This is different from just sending data pointers to every process
 as the multiprocessing assist in creating a generic pointer that every
-process can use as pointers are usually referenced to the start of the 
+process can use; as pointers are usually referenced to the start of the 
 current process memory block and not absolute.
 
 -------------------------------------------------------------------------------
@@ -21,11 +36,11 @@ current process memory block and not absolute.
 -------------------------------------------------------------------------------
 
 Events help me control the processes individual. I have a flag and set it 
-to indicate certain status or clear it or wait for another process to set
-it. For multiple process wanting to all say they completed a certain stage
-the usage of Barriers are more efficient. A Barrier wait for a set amount
-of process to reach it where after it releases all the processes currently 
-at it, it can also be re-used multiple times.
+to indicate certain status, or clear it, or wait for another process to set
+it. For multiple process waiting, for all to say they completed a certain 
+stage, the usage of Barriers are more efficient. A Barrier wait for a set 
+amount of process to reach it where after it releases all the processes 
+currently at it, it can also be re-used multiple times.
 
 -------------------------------------------------------------------------------
 15-08-2017 - gene
@@ -37,8 +52,8 @@ to share variables. Unfortunatley for big data it is terrible.
 Managerd pickle the data to a process and then pickle the changed data back 
 to itself ensuring concurrency. Managers does not work with binary objects 
 in the sense that the manager can not detect whether data change within the 
-object or not. Managers as I see it can be used for control and moving
-data for distributed computing.
+object or not and then never pickle the data back. Managers as I see it 
+can be used for control and moving data for distributed computing.
 
 -------------------------------------------------------------------------------
 11-08-2017 - gene
