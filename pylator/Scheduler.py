@@ -20,13 +20,15 @@ import ctypes
 import time
 import os
 
-crit = mp.get_logger().critical
-info = mp.get_logger().info
 debug = mp.get_logger().debug
+info = mp.get_logger().info
+crit = mp.get_logger().critical
+
 
 class Scheduler(object):
     def set_logging(self, level):
         #level = logging.INFO / logging.DEBUG logging.FATAL
+
         self.logger = mp.log_to_stderr()
         self.logger.setLevel(level)
 
@@ -52,60 +54,106 @@ class Scheduler(object):
         crit("ERROR: Not implemented yet")
         pass
 
+    def keypress(self):
+        key = self.simData['/simulation/buffer_current'].value
+        buffer_current = self.simData['/simulation/buffer_current'].value
+
+        if self.simData["/control/output/keypress"][int(buffer_current)].value == ord('q'):
+            self.flags["simulation_stop"].set()
+
     def run(self):
         modules = len(self.script_info)
         barrierWait = modules + 1
-        flags = {}
-        flags["simulation_active"] = mp.Event()
-        flags["simulation_next"] = mp.Barrier(barrierWait)
-        flags["simulation_stop"] = mp.Event()
-        flags["Module_done"] = mp.Barrier(barrierWait)
-        flags["simulation_result"] = mp.Barrier(barrierWait)
+        self.flags = {}
+        self.flags["simulation_active"] = mp.Event()
+        self.flags["simulation_next"] = mp.Barrier(barrierWait)
+        self.flags["simulation_stop"] = mp.Event()
+        self.flags["Module_done"] = mp.Barrier(barrierWait)
+        self.flags["simulation_result"] = mp.Barrier(barrierWait)
 
-        flags["simulation_active"].set()
-        flags["simulation_stop"].clear()
+        self.flags["simulation_active"].set()
+        self.flags["simulation_stop"].clear()
 
         self.simData = {}
         self.simData['scriptNames'] = self.script_info
+
+        keyPressed = 0
+        self.simData["/control/output/keypress"] = []
+        for i in range(2):
+            base_ptr = mp.Value(ctypes.c_uint8, keyPressed)
+            self.simData["/control/output/keypress"].append(base_ptr)
+        
+        
         self.create_sim_data()   
         
         connectivityMatrix = self.connectivity_matrix
         process = []
 
+        info("Creating processes...")
         # Create module processes
         for idx, script in enumerate(self.scripts):
-            p = script.Module(name=self.script_info[idx][0], args=(flags, self.simData, connectivityMatrix,))
+            p = script.Module(name=self.script_info[idx][0], args=(self.flags, self.simData, connectivityMatrix,))
             process.append(p)
-        info("All processes created")
+        info("Processes created!")
 
         # Start module Processes
+        info("Starting processes...")
         for p in process:
             p.start()
-        info("All processes started")
+        info("Processes started!")
         
 
-        flags["simulation_next"].wait()
+        self.flags["simulation_next"].wait()
         t1 = time.time()
+## Simulation Loop
         while True:
-        
-            flags["Module_done"].wait()
-            t2 = time.time()
-            info(t2 - t1)
+            #Wait for all modules to complete
+            self.flags["Module_done"].wait()
+## Process Simulation Results
+            t2 = time.time()  
+            info("FRAMERATE {:.3f}s delay,  {:.2f} FPS".format(t2 -t1, 1.0/(t2-t1)))
 
-            flags["simulation_result"].wait()
-            
+ 
+            self.keypress()
+
+            if (self.flags["simulation_stop"].is_set()):
+                break
+
+            #Wait for all results to be processed
+            self.flags["simulation_result"].wait()
+## Prepare Next Simulation Step
+
+            # Increase iteration step
             self.simData["/simulation/iteration"].value += 1
 
             # Switch simulation buffer
+            # Note: The simulation buffer gives the buffer where outputs
+            #       will be stored. This in the beginning of a simulation iteration
+            #       the inputs uses the previous buffer value.
             if (self.simData['/simulation/buffer_current'].value == 0):
                 self.simData['/simulation/buffer_current'].value = 1
             else:
                 self.simData['/simulation/buffer_current'].value = 0
 
-            flags["simulation_next"].wait()
-            t1 = time.time()
-            if (flags["simulation_stop"].is_set()):
-                break
+            # Clear the keypress placed as input to the simulation iteration that just finished.
+            self.simData["/control/output/keypress"][int(self.simData['/simulation/buffer_current'].value)].value = 0
 
+            # The longestDelay are introduced to help interactive modules to re-execute and prevent "lockup" of 
+            # rendering processes such as cv2.waitKey. waitkey can now have a shorter wait time allowing 
+            # maximum executino of the full simulation but continue rendering the windows.
+            # The longest delay are used to estimate re-execution of modules and need to be reset
+            # after every iteration to prevent iteration time to monotonically increase.
+            self.simData["/simulation/longestDelay"].value = 0.0
+  
+            # Wait for all modules to syncronise and update simulation variables
+            self.flags["simulation_next"].wait()
+## Start Simulation Step  
+            info("Iteration {}".format(self.simData["/simulation/iteration"].value))
+            t1 = time.time()
+            if (self.flags["simulation_stop"].is_set()):
+                break
+            ## While loop END
+
+        # Terminate all processes
         for p in process:
             p.terminate()

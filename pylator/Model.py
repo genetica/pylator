@@ -19,6 +19,9 @@ from contextlib import closing
 
 import numpy as np
 
+#logger = mp.log_to_stderr()
+#formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+#logger.handlers[0].setFormatter(formatter)
 debug = mp.get_logger().debug
 info = mp.get_logger().info
 crit = mp.get_logger().critical
@@ -37,6 +40,8 @@ class Model(mp.Process):
         self.simData = simData
         self.connectivityMatrix = connectivityMatrix
         self.flags = flags
+
+        self.p_longestDelay = 0.0
         Model.__count += 1
 
         self.createModuleDictionary()
@@ -58,6 +63,23 @@ class Model(mp.Process):
     def updateSimulationVariables(self):
         self.moduleData['/simulation/iteration'] = int(self.simData["/simulation/iteration"].value)
         self.moduleData['/simulation/buffer_current'] = int(self.simData["/simulation/buffer_current"].value)
+        self.moduleData['/simulation/longestDelay'] = self.simData["/simulation/longestDelay"].value
+
+        buff_frame = self.moduleData['/simulation/buffer_current']
+        if buff_frame == 0:
+            buff_frame = 1
+        else:
+            buff_frame = 0
+    
+        self.moduleData["/control/input/keypress"] = int(self.simData["/control/output/keypress"][buff_frame].value)
+        self.moduleData["/control/output/keypress"] = 0
+
+    def setSimulationVariables(self):
+        buff_frame = self.moduleData['/simulation/buffer_current']
+        if (self.moduleData["/control/output/keypress"] != 255) and (self.moduleData["/control/output/keypress"] != 0):
+            self.simData["/control/output/keypress"][buff_frame].value = self.moduleData["/control/output/keypress"]
+        self.moduleData["/control/input/keypress"] = 0
+
 
     def updateInputVariables(self):
         # Need to be generic dictionary specific for module
@@ -81,7 +103,9 @@ class Model(mp.Process):
 
     def updateOutputVariables(self):
         # might need to reupdated shared dictionary, depends... Uhmmm.
-        pass
+        buff_frame = self.moduleData['/simulation/buffer_current']
+        pass        
+        
 
     def preExecutionUpdateVariables(self):
         self.updateSimulationVariables()
@@ -89,7 +113,9 @@ class Model(mp.Process):
         self.setOutputVariables()
 
     def postExecutionUpdateVariables(self):
+        self.setSimulationVariables()
         self.updateOutputVariables()
+        
     
     def run(self):
         info("Run")       
@@ -100,7 +126,7 @@ class Model(mp.Process):
         while self.flags["simulation_active"].is_set():
 
             self.flags["simulation_next"].wait()
-            longestDelay = self.simData["/simulation/longestDelay"].value    
+
             t1 = time.time()
             self.preExecutionUpdateVariables()
             if (self.moduleData["/simulation/continuous"]):
@@ -108,34 +134,36 @@ class Model(mp.Process):
                 self.execute(self.moduleData)
                 tc2 = time.time()
                 td = tc2 - tc1
-                info(td)
-                if td > self.simData["/simulation/longestDelay"].value:
-                    self.simData["/simulation/longestDelay"].value = td  
-
-                if (longestDelay > 0.001):
+                info("{:.3f}".format(td))
+                self.setSimulationVariables()
+                if (self.p_longestDelay > 0.001):
                     delay = td
-                    while delay + 2*td < longestDelay:
-                        
+                    while delay + 2*td < self.p_longestDelay:
                         tc1 = time.time()
                         self.execute(self.moduleData)
                         tc2 = time.time()
                         td = tc2 - tc1
                         delay += td
+                        self.setSimulationVariables()
 
                 self.postExecutionUpdateVariables()
                 t2 = time.time()
-                info(t2 - t1)
+                info("{:.3f}".format(t2 - t1))
             else:
                 self.execute(self.moduleData)
                 self.postExecutionUpdateVariables()
                 t2 = time.time()
-                if t2 - t1 > self.simData["/simulation/longestDelay"].value:
-                    info("Logest Delay {}".format(t2 - t1))
-                    self.simData["/simulation/longestDelay"].value = t2 - t1
-                info(t2 - t1)
+                td = t2 - t1
+                info("{:.3f}".format(td))
+
+            if td > self.simData["/simulation/longestDelay"].value:
+                self.simData["/simulation/longestDelay"].value = td 
 
             self.flags["Module_done"].wait()
+            self.p_longestDelay = self.simData["/simulation/longestDelay"].value
             self.flags["simulation_result"].wait()
+
+            
 
         self.finalise(self.moduleData)
 
