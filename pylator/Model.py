@@ -71,14 +71,14 @@ class Model(mp.Process):
         else:
             buff_frame = 0
     
-        self.moduleData["/control/input/keypress"] = int(self.simData["/control/output/keypress"][buff_frame].value)
-        self.moduleData["/control/output/keypress"] = 0
+        self.moduleData["/control/inputs/keypress"] = int(self.simData["/control/outputs/keypress"][buff_frame].value)
+        self.moduleData["/control/outputs/keypress"] = 0
 
     def setSimulationVariables(self):
         buff_frame = self.moduleData['/simulation/buffer_current']
-        if (self.moduleData["/control/output/keypress"] != 255) and (self.moduleData["/control/output/keypress"] != 0):
-            self.simData["/control/output/keypress"][buff_frame].value = self.moduleData["/control/output/keypress"]
-        self.moduleData["/control/input/keypress"] = 0
+        if (self.moduleData["/control/outputs/keypress"] != 255) and (self.moduleData["/control/outputs/keypress"] != 0):
+            self.simData["/control/outputs/keypress"][buff_frame].value = self.moduleData["/control/outputs/keypress"]
+        self.moduleData["/control/inputs/keypress"] = 0
 
 
     def updateInputVariables(self):

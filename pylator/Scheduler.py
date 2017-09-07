@@ -58,7 +58,7 @@ class Scheduler(object):
         key = self.simData['/simulation/buffer_current'].value
         buffer_current = self.simData['/simulation/buffer_current'].value
 
-        if self.simData["/control/output/keypress"][int(buffer_current)].value == ord('q'):
+        if self.simData["/control/outputs/keypress"][int(buffer_current)].value == ord('q'):
             self.flags["simulation_stop"].set()
 
     def run(self):
@@ -78,10 +78,10 @@ class Scheduler(object):
         self.simData['scriptNames'] = self.script_info
 
         keyPressed = 0
-        self.simData["/control/output/keypress"] = []
+        self.simData["/control/outputs/keypress"] = []
         for i in range(2):
             base_ptr = mp.Value(ctypes.c_uint8, keyPressed)
-            self.simData["/control/output/keypress"].append(base_ptr)
+            self.simData["/control/outputs/keypress"].append(base_ptr)
         
         
         self.create_sim_data()   
@@ -136,7 +136,7 @@ class Scheduler(object):
                 self.simData['/simulation/buffer_current'].value = 0
 
             # Clear the keypress placed as input to the simulation iteration that just finished.
-            self.simData["/control/output/keypress"][int(self.simData['/simulation/buffer_current'].value)].value = 0
+            self.simData["/control/outputs/keypress"][int(self.simData['/simulation/buffer_current'].value)].value = 0
 
             # The longestDelay are introduced to help interactive modules to re-execute and prevent "lockup" of 
             # rendering processes such as cv2.waitKey. waitkey can now have a shorter wait time allowing 
