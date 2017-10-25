@@ -20,6 +20,7 @@ import ctypes
 import time
 import os
 
+
 debug = mp.get_logger().debug
 info = mp.get_logger().info
 crit = mp.get_logger().critical
@@ -109,18 +110,22 @@ class Scheduler(object):
         while True:
             #Wait for all modules to complete
             self.flags["Module_done"].wait()
+            #cv2.waitKey(1)
 ## Process Simulation Results
             t2 = time.time()  
-            info("FRAMERATE {:.3f}s delay,  {:.2f} FPS".format(t2 -t1, 1.0/(t2-t1)))
+            if t2 - t1 > 0:
+                info("ITERATIONRATE {:.3f}s delay,  {:.2f} IPS".format(t2 -t1, 1.0/(t2-t1)))
 
  
             self.keypress()
 
             if (self.flags["simulation_stop"].is_set()):
-                break
+                self.flags["simulation_active"].clear()
 
             #Wait for all results to be processed
             self.flags["simulation_result"].wait()
+            if not self.flags["simulation_active"].is_set():
+                break
 ## Prepare Next Simulation Step
 
             # Increase iteration step
@@ -154,6 +159,9 @@ class Scheduler(object):
                 break
             ## While loop END
 
+        info("Waiting for Modules to exit!")
+        
         # Terminate all processes
         for p in process:
-            p.terminate()
+            p.join()
+        info("Simulation Complete.")

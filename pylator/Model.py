@@ -35,6 +35,7 @@ class Model(mp.Process):
       
         #self.crit = logs[0]#mp.get_logger().critical
         
+        self.__name__ = name
         self.name = name
         self.id = Model.__count
         self.simData = simData
@@ -93,12 +94,14 @@ class Model(mp.Process):
         pass
 
             
-
+    def assignOutputVariable(self):
+        self.setOutputVariables()
+        
     def setOutputVariables(self):
         # check what buffer frame output to use
         buff_frame = self.moduleData['/simulation/buffer_current']       
         # Need to be generic dictionary specific for module
-        crit("ERROR setOutputVariables")
+        #crit("ERROR setOutputVariables")
         pass
 
     def updateOutputVariables(self):
@@ -134,7 +137,7 @@ class Model(mp.Process):
                 self.execute(self.moduleData)
                 tc2 = time.time()
                 td = tc2 - tc1
-                info("{:.3f}".format(td))
+                #info("{:.3f}".format(td))
                 self.setSimulationVariables()
                 if (self.p_longestDelay > 0.001):
                     delay = td
