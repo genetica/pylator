@@ -1,0 +1,10 @@
+{
+"/outputs/signal/dtype"   : "double",
+"/outputs/signal/shape"   : [],
+"/outputs/signal/default" : 0,
+
+"/inputs/signal_type"     : "sine",
+"/inputs/frequency"       : 112,
+"/inputs/amplitude"       : 1,
+"/inputs/sampling_period" : 0.0002
+}

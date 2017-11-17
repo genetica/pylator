@@ -8,16 +8,18 @@
     Original Created: Gene Stoltz
     Original Date: 25-07-2017
 
+    Version: 1.0
+
 """
 
-import ctypes
-import logging
 import multiprocessing as mp
+import logging
 import time
-
-from contextlib import closing
+from threading import BrokenBarrierError
 
 import numpy as np
+import ctypes
+
 
 #logger = mp.log_to_stderr()
 #formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -30,16 +32,23 @@ class Model(mp.Process):
     __count = 0
     def __init__(self, name, args):
         mp.Process.__init__(self)
-        
+
         flags, simData, connectivityMatrix = args
-      
+
         #self.crit = logs[0]#mp.get_logger().critical
-        
         self.__name__ = name
         self.name = name
         self.id = Model.__count
         self.simData = simData
-        self.connectivityMatrix = connectivityMatrix
+
+        self.connectivityMatrix = {}
+        self.connectivity_matrix_own = {}
+        for key in connectivityMatrix:
+            if "/" + self.__name__ + "/"  in key:
+                self.connectivityMatrix[key] = connectivityMatrix[key]
+                self.connectivity_matrix_own["/" + "/".join(key.split("/")[2:])] = \
+                                            connectivityMatrix[key]
+
         self.flags = flags
 
         self.p_longestDelay = 0.0
@@ -52,18 +61,103 @@ class Model(mp.Process):
         pass
 
     def finalise(self, simData):
-        pass
-
+        info("Quitting")
 
     def createModuleDictionary(self):
-        # Need to be generic dictionary specific for module
+        # Module dictionary
         self.moduleData = {}
-        crit("ERROR createModuleDictionary")
-        pass
-    
+        # Update dictionaries
+        self.simulation_keys = []
+        self.input_keys_val = []
+        self.input_keys_arr = []
+        self.output_keys_val = []
+        self.output_keys_arr = []
+
+        # simulation specific
+        for key in self.simData:
+            # Load simulation data
+            if "/simulation/" in key:
+                self.simulation_keys.append(key)
+                self.moduleData[key] = self.simData[key].value
+            # Load all data with respect to the module
+            elif "/" + self.__name__ + "/" in key:
+                new_key = "/" + "/".join((key.split("/")[2:]))
+                self.moduleData[new_key] = self.simData[key]
+                if  ("outputs" in new_key) and ("dtype" not in new_key) \
+                and ("shape" not in new_key) and ("default" not in new_key):
+                    if isinstance(self.moduleData[new_key][0], ctypes.Array):
+                        self.output_keys_arr.append(new_key)
+                    else:
+                        self.output_keys_val.append(new_key)
+
+        for key in self.connectivity_matrix_own:
+            val = self.connectivity_matrix_own[key]
+            if isinstance(self.simData[val][0], ctypes.Array):
+                self.input_keys_arr.append(key)
+            else:
+                self.input_keys_val.append(key)
+
+        # Inputs
+        for key in self.input_keys_val:
+            output_link = self.connectivity_matrix_own[key]
+            self.moduleData[key] = self.simData[output_link][0].value
+
+        for key in self.input_keys_arr:
+            output_link = self.connectivity_matrix_own[key]
+            self.moduleData[key] = np.frombuffer(self.simData[output_link][0], \
+                                        dtype=self.simData[output_link + "/dtype"] \
+                                        ).reshape(self.simData[output_link + "/shape"])
+
+        # Outputs
+        for key in self.output_keys_val:
+            self.moduleData[key] = 0
+
+        for key in self.output_keys_arr:
+            self.moduleData[key] = np.frombuffer(self.moduleData[key][0], \
+                                        dtype=self.moduleData[key + "/dtype"] \
+                                        ).reshape(self.moduleData[key + "/shape"])
+
+    def updateInputVariables(self):
+        # check what buffer frame input to use
+        buff_frame = self.moduleData["/simulation/buffer_current"]
+        if buff_frame == 0:
+            buff_frame = 1
+        else:
+            buff_frame = 0
+        for key in self.input_keys_val:
+            output_link = self.connectivity_matrix_own[key]
+            self.moduleData[key] = self.simData[output_link][buff_frame].value
+
+        for key in self.input_keys_arr:
+            output_link = self.connectivity_matrix_own[key]
+            self.moduleData[key] = np.frombuffer(self.simData[output_link][buff_frame], \
+                                        dtype=self.simData[output_link + "/dtype"] \
+                                        ).reshape(self.simData[output_link + "/shape"])
+
+    def setOutputVariables(self):
+        # Assign pointer to output shared memory.
+        buff_frame = self.moduleData["/simulation/buffer_current"]
+        for key in self.output_keys_val:
+            self.moduleData[key] = self.simData["/" + self.__name__ + key][buff_frame].value
+
+        for key in self.output_keys_arr:
+            self.moduleData[key] = np.frombuffer( \
+                                        self.simData["/" + self.__name__ + key][buff_frame], \
+                                        dtype=self.moduleData[key + "/dtype"] \
+                                        ).reshape(self.moduleData[key + "/shape"])
+
+    def updateOutputVariables(self):
+        #Set value for shared variables that is not matrices, maybe not necessary
+        buff_frame = self.moduleData["/simulation/buffer_current"]
+        for key in self.output_keys_val:
+            info(key)
+            self.simData["/" + self.__name__ + key][buff_frame].value = self.moduleData[key]
+
     def updateSimulationVariables(self):
-        self.moduleData['/simulation/iteration'] = int(self.simData["/simulation/iteration"].value)
-        self.moduleData['/simulation/buffer_current'] = int(self.simData["/simulation/buffer_current"].value)
+        self.moduleData['/simulation/iteration'] = \
+                                        int(self.simData["/simulation/iteration"].value)
+        self.moduleData['/simulation/buffer_current'] = \
+                                        int(self.simData["/simulation/buffer_current"].value)
         self.moduleData['/simulation/longestDelay'] = self.simData["/simulation/longestDelay"].value
 
         buff_frame = self.moduleData['/simulation/buffer_current']
@@ -71,44 +165,15 @@ class Model(mp.Process):
             buff_frame = 1
         else:
             buff_frame = 0
-    
-        self.moduleData["/control/inputs/keypress"] = int(self.simData["/control/outputs/keypress"][buff_frame].value)
-        self.moduleData["/control/outputs/keypress"] = 0
+
+        self.moduleData["/inputs/keypress"] = \
+                                        self.simData["/control/outputs/keypress"][buff_frame].value
+        self.moduleData["/outputs/keypress"] = 0
 
     def setSimulationVariables(self):
         buff_frame = self.moduleData['/simulation/buffer_current']
-        if (self.moduleData["/control/outputs/keypress"] != 255) and (self.moduleData["/control/outputs/keypress"] != 0):
-            self.simData["/control/outputs/keypress"][buff_frame].value = self.moduleData["/control/outputs/keypress"]
-        self.moduleData["/control/inputs/keypress"] = 0
-
-
-    def updateInputVariables(self):
-        # Need to be generic dictionary specific for module
-        buff_frame = self.moduleData['/simulation/buffer_current']
-        if buff_frame == 0:
-            buff_frame = 1
-        else:
-            buff_frame = 0
-        
-        crit("ERROR updateVariables")
-        pass
-
-            
-    def assignOutputVariable(self):
-        self.setOutputVariables()
-        
-    def setOutputVariables(self):
-        # check what buffer frame output to use
-        buff_frame = self.moduleData['/simulation/buffer_current']       
-        # Need to be generic dictionary specific for module
-        #crit("ERROR setOutputVariables")
-        pass
-
-    def updateOutputVariables(self):
-        # might need to reupdated shared dictionary, depends... Uhmmm.
-        buff_frame = self.moduleData['/simulation/buffer_current']
-        pass        
-        
+        self.simData["/" + self.__name__ + "/outputs/keypress"][buff_frame].value = \
+                                        self.moduleData["/outputs/keypress"]
 
     def preExecutionUpdateVariables(self):
         self.updateSimulationVariables()
@@ -118,67 +183,49 @@ class Model(mp.Process):
     def postExecutionUpdateVariables(self):
         self.setSimulationVariables()
         self.updateOutputVariables()
-        
-    
-    def run(self):
-        info("Run")       
-        self.initialise(self.moduleData)
 
-        
+    def run(self):
+        info("Run")
+        self.initialise(self.moduleData)
 
         while self.flags["simulation_active"].is_set():
 
-            self.flags["simulation_next"].wait()
+            try:
+                self.flags["simulation_next"].wait()
+            except BrokenBarrierError:
+                break
 
             t1 = time.time()
             self.preExecutionUpdateVariables()
-            if (self.moduleData["/simulation/continuous"]):
-                tc1 = time.time()
-                self.execute(self.moduleData)
-                tc2 = time.time()
-                td = tc2 - tc1
-                #info("{:.3f}".format(td))
-                self.setSimulationVariables()
-                if (self.p_longestDelay > 0.001):
-                    delay = td
-                    while delay + 2*td < self.p_longestDelay:
-                        tc1 = time.time()
-                        self.execute(self.moduleData)
-                        tc2 = time.time()
-                        td = tc2 - tc1
-                        delay += td
-                        self.setSimulationVariables()
 
-                self.postExecutionUpdateVariables()
-                t2 = time.time()
-                info("{:.3f}".format(t2 - t1))
-            else:
-                self.execute(self.moduleData)
-                self.postExecutionUpdateVariables()
-                t2 = time.time()
-                td = t2 - t1
-                info("{:.3f}".format(td))
+            self.execute(self.moduleData)
+            self.postExecutionUpdateVariables()
+            t2 = time.time()
+            td = t2 - t1
+            info("{:.3f}".format(td))
 
             if td > self.simData["/simulation/longestDelay"].value:
-                self.simData["/simulation/longestDelay"].value = td 
+                self.simData["/simulation/longestDelay"].value = td
 
-            self.flags["Module_done"].wait()
+            try:
+                self.flags["Module_done"].wait()
+            except BrokenBarrierError:
+                break
+
             self.p_longestDelay = self.simData["/simulation/longestDelay"].value
-            self.flags["simulation_result"].wait()
 
-            
+            try:
+                self.flags["simulation_result"].wait()
+            except BrokenBarrierError:
+                break
 
         self.finalise(self.moduleData)
-
-        #self.execute(self.moduleData)
 
     def execute(self, simData):
         raise ValueError(self.name, "No Model has been instantiated.")
 
 if __name__ == '__main__':
-
     #  NOT valid test currently
-
     logger = mp.log_to_stderr()
     #logger.setLevel(logging.CRITICAL)
     logger.setLevel(logging.INFO)

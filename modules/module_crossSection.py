@@ -35,9 +35,7 @@ def module_configuration():
     #"/outputs/signal/default" : 0,
 
     # Define module inputs with assigned defaults
-    "/inputs/monitor" : [],
     "/inputs/signal1" : 0,
-    "/inputs/signal2" : 0,
     }
     return simData
 
@@ -49,19 +47,12 @@ class Module(pyl.Model):
     
         time_step = simData["/simulation/time_step"]
 
-        self.plot_time = deque()
-        for i in range(data_points):
-            self.plot_time.append((-data_points+i)*time_step)
-        simData["/self/data_to_time"] = self.plot_time
-
-        for monitor in simData["/inputs/monitor"]:
-            simData["/self/data_to_plot/" + monitor] = deque()
-            for i in range(data_points):
-                simData["/self/data_to_plot/" + monitor].append(0)
+        self.x = np.arange(1001)
+        self.y = np.ones(1001)*255
+        self.y[0] = 0
 
         self.fig, self.ax = plt.subplots()
-        for monitor in simData["/inputs/monitor"]:
-            simData["/self/line/" + monitor], = self.ax.plot(simData["/self/data_to_time"], simData["/self/data_to_plot/" + monitor])
+        self.line, = self.ax.plot(self.x, self.y)
         
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self)
 
@@ -76,28 +67,23 @@ class Module(pyl.Model):
     def execute(self, simData):
         debug("Executing my Model {} Iteration {}".format(self.name, simData["/simulation/iteration"]))
 
+        pipeline = simData["/inputs/signal1"]
+
         iteration = simData["/simulation/iteration"]
         time_step = simData["/simulation/time_step"]
 
-        for idx, monitor in enumerate(simData["/inputs/monitor"]):
-            simData["/self/data_to_plot/"+monitor].append(simData["/inputs/signal" + str(idx+1)])
-            simData["/self/data_to_plot/"+monitor].popleft()
-
-        simData["/self/data_to_time"].append(iteration * time_step)
-        simData["/self/data_to_time"].popleft()        
+    
 
         #simData["/self/line"].set_ylim
         #simData["/self/line"].set_ydata(simData["/self/data_to_plot"])       
         if (iteration*time_step)%simData["/self/updateRate"] < time_step*0.1:
             if simData["/self/update_plot"]:
-                time_axes = (np.array(simData["/self/data_to_time"]) +iteration )* time_step *1e6
-                for monitor in simData["/inputs/monitor"]:
-                    simData["/self/line/" + monitor].set_data(time_axes, simData["/self/data_to_plot/" + monitor])
-                self.ax.relim(True)
-                self.ax.autoscale(True)
+                
+                self.line.set_ydata(pipeline[500,:])
+                #self.ax.relim(True)
+                #self.ax.autoscale(True)
                 self.fig.canvas.draw()
                 self.fig.canvas.flush_events()
-
 
     def __call__(self, event):
         if event.key == 'v':

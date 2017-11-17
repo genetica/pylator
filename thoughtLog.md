@@ -1,6 +1,12 @@
 -------------------------------------------------------------------------------
 30-08-2017 - gene
 -------------------------------------------------------------------------------
+Keywords, "user", "inputs", "outputs", "simulation", "dtype", "shape", "default"
+
+
+-------------------------------------------------------------------------------
+30-08-2017 - gene
+-------------------------------------------------------------------------------
 pylator with its new classy style. Unfortunatley there is significant work
 left in setting up the generic functions for every module. I have to say
 the classes does provide a clear interface for the simulator. One thing that
