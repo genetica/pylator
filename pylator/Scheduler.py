@@ -20,6 +20,9 @@ import importlib.util
 import ctypes
 import time
 import json
+import os
+if os.name == 'nt':
+    import msvcrt
 
 debug = mp.get_logger().debug
 info = mp.get_logger().info
@@ -240,6 +243,20 @@ class Scheduler(object):
 
         return dtype, ctype
 
+    def check_terminal_input(self):
+        if os.name == 'nt':
+            if msvcrt.kbhit():
+                key = msvcrt.getch()
+                try:
+                    key = ord(key)
+                    if (key != 0) and (key != 255):
+                        buffer_current = self.simData['/simulation/buffer_current'].value
+                        self.simData["/control/outputs/keypress"][buffer_current].value = key
+                except:
+                    crit("WARNING: {} received not readable".format(key))
+        else:
+            crit("WANRING: Current terminal input is only supported in Windows.")
+
     def keypress(self):
         buffer_current = self.simData['/simulation/buffer_current'].value
 
@@ -248,8 +265,11 @@ class Scheduler(object):
                                "/outputs/keypress"][buffer_current].value
             if (key != 0) and (key != 255):
                 self.simData["/control/outputs/keypress"][buffer_current].value = key
-                if key == ord('q'):
-                    self.flags["simulation_stop"].set()
+
+        self.check_terminal_input()
+        key = self.simData["/control/outputs/keypress"][buffer_current].value
+        if key == ord('q'):
+            self.flags["simulation_stop"].set()
 
     def run(self):
         modules = len(self.script_info)
