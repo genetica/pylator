@@ -28,19 +28,24 @@ def modify_doc(doc):
 
     doc.add_root(column(slider, plot))
 
-    doc.theme = Theme(filename="theme.yaml")
+    
 
 bokeh_app = Application(FunctionHandler(modify_doc))
 
-# Setting num_procs here means we can't touch the IOLoop before now, we must
-# let Server handle that. If you need to explicitly handle IOLoops then you
-# will need to use the lower level BaseServer class.
-server = Server({'/': bokeh_app})
-server.start()
+def bkworker():
+    server.start()
+    server.io_loop.add_callback(server.show, "/")
+    server.io_loop.start()
 
 if __name__ == '__main__':
     print('Opening Bokeh application on http://localhost:5006/')
+    import threading
+    server = Server({'/': bokeh_app})
+    worker = threading.Thread(target=bkworker)
+    worker.start()
+    while input(">>")[0] != 'q':
+        pass
+    server.io_loop.stop()
+    worker.join()
 
-    server.io_loop.add_callback(server.show, "/")
-    server.io_loop.start()
     

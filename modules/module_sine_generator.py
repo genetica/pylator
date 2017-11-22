@@ -48,6 +48,8 @@ class Module(pyl.Model):
             function = self.block
         elif (signal_type == "triangle"):
             function = self.triangle
+        else:
+            function = self.no_function
             
         if int(iteration*Tt / Ts)*Ts >= (iteration-1)*Tt:
             time = iteration*Tt
@@ -66,3 +68,6 @@ class Module(pyl.Model):
 
     def triangle(self, value):
         return value/(np.pi) if value < np.pi else (2*np.pi - value)/(np.pi)
+    
+    def no_function(self, value):
+        return value

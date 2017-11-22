@@ -54,6 +54,8 @@ class Scheduler(object):
     def create_sim_data(self):
         # Keypress data
         keyPressed = 0
+        self.simData["/control/outputs/keypress/shape"] = []
+        self.simData["/control/outputs/keypress/dtype"] = np.int
         self.simData["/control/outputs/keypress"] = []
         for i in range(2):
             base_ptr = mp.Value(ctypes.c_uint8, keyPressed)
@@ -204,7 +206,14 @@ class Scheduler(object):
                             self.simData["/" + name + test] = []
                             elements = int(np.prod(shape))
                             if elements > 1:
-                                if isinstance(default, str):
+                                if data_type == "str":
+                                    if not isinstance(defaults, str):
+                                        defaults = ""
+                                    empty = np.zeros(elements, dtype)
+                                    empty[:len(defaults)] = defaults[:]
+                                    defaults = empty
+
+                                elif isinstance(default, str):
                                     try:
                                         defaults = np.loadtxt(defaults, dtype=dtype)
                                     except:
@@ -217,6 +226,9 @@ class Scheduler(object):
                                     arr = np.frombuffer(base_ptr, dtype)
                                     arr[:] = defaults
                                     self.simData["/" + name + test].append(base_ptr)
+                                
+                                if data_type == "str":
+                                    self.simData["/" + name + test + "/dtype"] = "str"
                             else:
                                 defaults = default
                                 for i in range(2):
@@ -232,7 +244,7 @@ class Scheduler(object):
             "double"    : (np.float64, ctypes.c_longdouble),
             "uint8"     : (np.uint8, ctypes.c_uint8),
             "uint16"    : (np.uint16, ctypes.c_uint16),
-            "str"       : ("str", ctypes.c_wchar_p),
+            "str"       : (np.uint16, ctypes.c_wchar),
             "bool"      : ("bool", ctypes.c_bool)
         }
 

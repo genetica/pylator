@@ -10,8 +10,9 @@ script_info = [
                  ["noise_generator",     "../modules/module_noise_generator.py"],
                  ["adder",               "../modules/module_adder.py"],
                  ["low_pass",            "../modules/module_lowpass_filter.py"],
+                 ["fft1",                "../modules/module_fft.py"],
                  #["scope1",              "../modules/module_bokeh.py"],
-                 ["scope2",              "../modules/module_bokeh.py"]
+                 ["scope2",              "../modules/module_bokeh1.py"]
                  ]
 
 simData = {
@@ -24,13 +25,15 @@ simData = {
     "/simulation/time_step"         : 0.0001,
 
     "/user/inputs/scope1"           : ["sine_generator"],
-    "/user/inputs/scope2"           : ["adder"]
+    "/user/inputs/scope2"           : ["adder"],
+
+    "/user/outputs/fft_size"        : [300]
 
 }
 connectivityMatrix ={   "/adder/inputs/signal1" : "/noise_generator/outputs/signal",
                         "/adder/inputs/signal2" : "/sine_generator/outputs/signal",
                         
-                        "/sine_generator/inputs/signal_type"     : "/user/outputs/signal_type",
+                        "/sine_generator/inputs/signal_type"     : "/scope2/outputs/signal_type",
                         "/sine_generator/inputs/frequency"       : "/user/outputs/frequency",
                         "/sine_generator/inputs/amplitude"       : "/user/outputs/amplitude",
                         "/sine_generator/inputs/sampling_period" : "/user/outputs/sampling_period",
@@ -39,6 +42,9 @@ connectivityMatrix ={   "/adder/inputs/signal1" : "/noise_generator/outputs/sign
                         "/noise_generator/inputs/noise"           : "/user/outputs/noise",   
                         
                         "/low_pass/inputs/signal" : "/adder/outputs/signal",
+
+                        "/fft1/inputs/signal"       : "/low_pass/outputs/signal",
+                        "/fft1/outputs/signal/shape" : "/user/outputs/fft_size",
 
                         "/scope1/inputs/signal" : "/user/inputs/scope1",
                         "/scope2/inputs/signal" : "/user/inputs/scope2",
@@ -49,7 +55,11 @@ connectivityMatrix ={   "/adder/inputs/signal1" : "/noise_generator/outputs/sign
                         "/scope1/inputs/signal1"  : "/sine_generator/outputs/signal",
 
                         "/scope2/inputs/monitor"  : "/user/inputs/scope2",
-                        "/scope2/inputs/signal1"  : "/adder/outputs/signal",                      
+                        "/scope2/inputs/signal1"  : "/sine_generator/outputs/signal",
+                        "/scope2/inputs/signal2"  : "/noise_generator/outputs/signal",
+                        "/scope2/inputs/signal3"  : "/adder/outputs/signal",
+                        "/scope2/inputs/signal4"  : "/low_pass/outputs/signal",
+                        "/scope2/inputs/array1"   : "/fft1/outputs/signal",
 
                     }
 # Usage of these inputs are not complete in class yet thus in modules the following functions must be
