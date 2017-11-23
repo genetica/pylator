@@ -194,6 +194,7 @@ class Model(mp.Process):
         self.moduleData['/simulation/buffer_current'] = \
                                         int(self.simData["/simulation/buffer_current"].value)
         self.moduleData['/simulation/longestDelay'] = self.simData["/simulation/longestDelay"].value
+        self.moduleData['/simulation/iterations_per_second'] = self.simData["/simulation/iterations_per_second"].value
 
         buff_frame = self.moduleData['/simulation/buffer_current']
         if buff_frame == 0:

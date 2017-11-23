@@ -1,8 +1,34 @@
 -------------------------------------------------------------------------------
-30-08-2017 - gene
+23-11-2017 - gene
 -------------------------------------------------------------------------------
-Keywords, "user", "inputs", "outputs", "simulation", "dtype", "shape", "default"
+It seems like most of the baseline framework has been completed. There might
+be a few bugs that pop up, but nothing significant that I can think of now.
+I have not yet integrated the conscept of using excel to configure the 
+simulation by default but I will leave that on hold as the dictionaries living
+in the base file of the simulation feels adequate. I plan on finishing the
+2d diffusion example which currently is only a signal and display. I also
+probably need to start writing a getting started guide and how to use this 
+library guide. Learning only by example without any words around it can 
+possibly be difficult.
 
+The usage of bokeh for graphing function, I am a bit unsure and believe 
+somewhat in the longrun using matplotlib will yield smoother and faster 
+results. Bokeh really have nice widgets and interactions. The only shortage 
+for matplotlib currently is the support for "tabs" equivalent to Panels in 
+bokeh. I wonder if panels can be implemented by using buttons and then chaning
+the link between axes and figures in matplotlib. I will investigate this 
+sometime.
+
+Currently two big gaps exist. Firstly one everyone want and that is a 
+GUI to configure the links between blocks. Secondly the shortage of generic 
+and usable modules, these I hope will grow slowly. The GUI on the otherhand
+is a beast to start with...
+
+-------------------------------------------------------------------------------
+20-11-2017 - gene
+-------------------------------------------------------------------------------
+New Keywords, "user", "inputs", "outputs", "simulation", "dtype", "shape", 
+"default", do not use these in variable names.
 
 -------------------------------------------------------------------------------
 30-08-2017 - gene

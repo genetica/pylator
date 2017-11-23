@@ -1,4 +1,11 @@
 -------------------------------------------------------------------------------
+23-11-2017 - gene
+-------------------------------------------------------------------------------
+So many things changed that I think about cleaning up everything and doing a
+reset on the history log, but from here on the changes should be smaller and 
+these I will log.
+
+-------------------------------------------------------------------------------
 30-08-2017 - gene
 -------------------------------------------------------------------------------
 The Model class are in a usable condition. This class is built on 

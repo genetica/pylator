@@ -1,3 +1,4 @@
+/__pycache__*
 /*__pycache__*
 /*.vscode
 /~*
@@ -5,4 +6,7 @@
 /*hdf5*
 /*.xlsx
 /*.json
+/*.html
 !/exampleFiles/*.xlsx
+!/scenarios/*.json
+!/testScripts/templates/*.html

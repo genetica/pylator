@@ -77,6 +77,9 @@ class Scheduler(object):
         self.simData["/simulation/longestDelay"] = mp.Value(ctypes.c_float, longestDelay)
         buffer_current = 0
         self.simData["/simulation/buffer_current"] = mp.RawValue(ctypes.c_int, buffer_current)
+        iterations_per_second = 0.0
+        self.simData["/simulation/iterations_per_second"] = mp.Value(ctypes.c_float, iterations_per_second)
+
 
         if "/simulation/time_step" in self.simData:
             self.simData["/simulation/time_step"] = \
@@ -327,9 +330,10 @@ class Scheduler(object):
 ## Process Simulation Results
             t2 = time.time()
             if t2 - t1 > 0:
-                info("ITERATION RATE {:.3f}s delay,  {:.2f} IPS".format(t2 -t1, 1.0/(t2-t1)))
-
-
+                ips = 1.0/(t2-t1)
+                self.simData["/simulation/iterations_per_second"].value = 1.0/(t2-t1)
+                debug("ITERATION RATE {:.3f}s delay,  {:.2f} IPS".format(t2 -t1, ips))
+                
             self.keypress()
 
             if self.flags["simulation_stop"].is_set():
