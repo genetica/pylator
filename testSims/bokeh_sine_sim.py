@@ -79,7 +79,7 @@ connectivityMatrix ={   "/adder/inputs/signal1" : "/noise_generator/outputs/sign
 # Create simulator
 sim = pyl.Scheduler(script_info, simData, connectivityMatrix)
 
-if __name__ == "__main__":   
+if __name__ == "__main__":
     #FATAL/DEBUG/INFO
     # Set logging of simulator
     sim.set_logging(logging.FATAL)
