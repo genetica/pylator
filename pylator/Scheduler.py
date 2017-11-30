@@ -240,6 +240,23 @@ class Scheduler(object):
             else:
                 crit("{:20} has no configuration data.".format(name))
 
+        # Check connectivity matrix assignments are valid
+        for key in self.connectivity_matrix:
+            val = self.connectivity_matrix[key]
+            if isinstance(val, str) and val[0] == '/' and val.split("/")[1] != "control":
+                test = val.split("/")[1]
+                valid = False
+                for idx, script in enumerate(self.scripts):
+                    name = self.script_info[idx][0]
+                    if test == name:
+                        valid = True
+                        break
+                if valid == False:
+                    crit("Connectivity Matrix error: For input {}, {} not a valid input.".format(key, val))
+                    exit()
+
+
+
     def select_data_type(self, data_type):
         data_type_dict = {
             "int"       : (np.int, ctypes.c_int),
